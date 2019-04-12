@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body>
+    <div id="local" class="local_user">
+        <li>
+            <input type="text" id="local_id" class="text">
+            <div id="local_name" style="display:none;" class="text"></div>
+            <video id="local_elm" class="video" muted autoplay playsinline></video>
+        </li>
+    </div>
+    <div id="remote"></div>
+</body>
+<script src="rtc.js"></script>
+
+</html>

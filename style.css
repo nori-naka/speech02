@@ -1,0 +1,61 @@
+body {
+  font-family: 'Avenir','Helvetica Neue','Helvetica','Arial','Hiragino Sans','ヒラギノ角ゴシック',YuGothic,'Yu Gothic','メイリオ', Meiryo,'ＭＳ Ｐゴシック','MS PGothic';
+  font-size: 24px;
+}
+
+.text {
+  font-family: 'Avenir','Helvetica Neue','Helvetica','Arial','Hiragino Sans','ヒラギノ角ゴシック',YuGothic,'Yu Gothic','メイリオ', Meiryo,'ＭＳ Ｐゴシック','MS PGothic';
+  font-size: 24px;
+}
+/* ビデオ */
+.video {
+  width: 320px;
+  height: auto;
+  display: block;
+}
+
+#remote {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  width: 340px;
+}
+#local {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 340px;
+}
+
+ul, ol {
+  padding: 0;
+  position: relative;
+}
+
+.user_list {
+  color: #2d8fdd;
+  border-left: solid 6px #2d8fdd;/*左側の線*/
+  background: #f1f8ff;/*背景色*/
+  margin-bottom: 3px;/*下のバーとの余白*/
+  line-height: 1.5;
+  padding: 0.5em;
+  list-style-type: none!important;/*ポチ消す*/
+}
+
+.local_user {
+  color: #dd822d;
+  border-left: solid 6px #dd822d;/*左側の線*/
+  background: #fcf0da;/*背景色*/
+  margin-bottom: 3px;/*下のバーとの余白*/
+  line-height: 1.5;
+  padding: 0.5em;
+  list-style-type: none!important;/*ポチ消す*/
+}
+
+.remote_video {
+  width: 320px;
+  height: 240px;
+  right: 10px;
+  margin: 0 1em 0 1em;
+  display: none;
+}
