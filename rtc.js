@@ -28,7 +28,7 @@ constraints = {
 navigator.mediaDevices.enumerateDevices()
 	.then(function(devices) {
   		devices.forEach(function(device) {
-    		console.dir(device);
+    		console.log(device.label);
   		});
 	})
 	.catch(function(err) {
