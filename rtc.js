@@ -123,6 +123,9 @@ socketio.on("renew", function (msg) {
                             candidate: ev.candidate
                         })
                     )
+                } else {
+                    remotes[new_user].count = 0;
+                    side_answer = false;
                 }
             }
             remotes[new_user].peer.ontrack = function (ev) {
@@ -130,7 +133,6 @@ socketio.on("renew", function (msg) {
 
                 if (ev.streams && ev.streams[0]) {
                     remotes[new_user].obj.show(ev);
-                    remotes[new_user].count = 0;
                 }
             }
 
@@ -138,8 +140,7 @@ socketio.on("renew", function (msg) {
             remotes[new_user].peer.onnegotiationneeded = function (ev) {
                 console.log(`count=${remotes[new_user].count}`);
 
-                if (!remotes[new_user].video_sender) return;
-                if (!remotes[new_user].audio_sender) return;
+                if (side_answer) return;
 
                 if (remotes[new_user].count == 0) {
                     remotes[new_user].peer.createOffer()
@@ -164,8 +165,8 @@ socketio.on("renew", function (msg) {
                             console.log(`count=${remotes[new_user].count}`)
                             console.log(`onnegotiationneeded: ${err}`);
                         })
-                    remotes[new_user].count++;
                 }
+                remotes[new_user].count++;
             }
 
             remotes[new_user].obj.on("click", function () {
@@ -210,12 +211,16 @@ socketio.on("renew", function (msg) {
     })
 });
 
+let side_answer = false;
+
 socketio.on("publish", function (msg) {
     const data = JSON.parse(msg);
 
     if (data.dest == local_id) {
         if (data.type == "offer") {
 
+
+            side_answer = true;
             if (!remotes[data.src].video_sender) {
                 remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
             }
