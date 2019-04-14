@@ -1,4 +1,4 @@
-var PORT = 10443;
+﻿var PORT = 10443;
 var SSL_KEY = 'server.key';
 var SSL_CERT = 'server.crt';
 
@@ -24,7 +24,6 @@ var options = {
 const getUniqueId = getUniqueIdMaker();
 
 // サーバの初期化
-//var server = require("https").createServer(options, function(req, res) {
 var server = require("http").createServer(function (req, res) {
     var urlParse = url.parse(req.url, true);
 
@@ -86,23 +85,6 @@ io.on("connection", function (socket) {
         socket.broadcast.emit("regist", JSON.stringify({ id: _id }));
     });
 
-    // // 登録応答
-    // socket.on("regist-apply", function (msg) {
-    //     var data = JSON.parse(msg);
-    //     console.log(`ON REGIST-APPLY: DEST=${data.dest} SRC=${data.src}`);
-    //     if (!user_sid[data.src]){
-    //         user_sid[data.src] = socket.id;
-    //     }
-    //     socket.to(user_sid[data.dest]).emit("regist-apply", msg);
-    // });
-
-    // // Senderからの映像ソース変更
-    // socket.on("video_init", function (msg) {
-    //     var data = JSON.parse(msg);
-    //     console.log(`ON VIDEO_INIT: DEST=${data.dest} SRC=${data.src}`);
-    //     socket.to(user_sid[data.dest]).emit("video_init", msg);
-    // });
-
     // P2P開始
     socket.on("start", function (msg) {
         var data = JSON.parse(msg);
@@ -116,6 +98,7 @@ io.on("connection", function (socket) {
 
     // メッセージ送信
     socket.on("publish", function (msg) {
+        console.log(`publish=${msg}`)
         var data = JSON.parse(msg);
         if (data.dest) {
             //socket.broadcast.emit("publish", msg);
@@ -131,6 +114,7 @@ io.on("connection", function (socket) {
     // 位置情報着信
     socket.on("renew", function (msg) {
         var data = JSON.parse(msg);
+        console.log(JSON.stringify(data, null, 2));
         user_sid[data.id] = socket.id;
 
         //console.log(`ON RENEW : From=${data.id} LAT=${data.lat} LNG=${data.lng} CAM=${data.cam}`);
@@ -170,20 +154,6 @@ io.on("connection", function (socket) {
         //     }
         // });
     });
-
-    // 接続終了(接続元ユーザを削除し、他ユーザへ通知)
-    /*
-    Object.keys(user_sid).forEach(function(_id){
-        if (socket.id == user_sid[_id]) {
-            delete userHash[_id];
-            delete user_sid[_id];
-            var msg = {id: _id};
-            socket.broadcast.emit("disconect", JSON.stringify(msg));
-        }
-    });
-    console.log("DELETE:USERHASH=" + JSON.stringify(userHash));        
-    //socket.broadcast.emit("renew", { value: JSON.stringify(userHash) });   
-    */
 
     setInterval(function () {
         socket.emit("renew", JSON.stringify(userHash));

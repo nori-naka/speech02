@@ -8,7 +8,7 @@ const remotes = {};
 let local_id = null;
 let local_stream = null;
 
-constraints = {
+let constraints = {
     audio: true,
     video: {
         width: {
@@ -25,29 +25,23 @@ constraints = {
     }
 }
 
-navigator.mediaDevices.enumerateDevices()
-	.then(function(devices) {
-  		devices.forEach(function(device) {
-    		console.log(device.label);
-  		});
-	})
-	.catch(function(err) {
-  		console.log(err.name + ": " + err.message);
-	});
-
-//constraints = { video: true, audio: true }
-navigator.mediaDevices.getUserMedia(constraints)
-    .then(function (stream) {
-        local_stream = stream;
-        $local_elm.srcObject = local_stream;
-        $local_elm.onloadedmetadata = function (e) {
+local_video_start = function () {
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then(function (stream) {
+            local_stream = stream;
+            $local_elm.srcObject = local_stream;
             $local_elm.play();
-        };
-        $local_elm.play();
-    })
-    .catch(function (err) {
-        console.log(`gUM error:${err}`);
-    });
+            selectDevices();
+        })
+        .catch(function (err) {
+            console.log(`gUM error:${err}`);
+        });
+}
+local_video_start();
+
+const stream_stop = function (stream) {
+    stream.getVideoTracks().forEach(track => track.stop());
+}
 
 $local_id.onchange = function (ev) {
     console.log(`$local_id:${ev.target.value}`);
@@ -56,7 +50,7 @@ $local_id.onchange = function (ev) {
     $local_name.innerText = local_id;
     $local_name.style.display = "block";
     setInterval(function () {
-        socketio.emit("renew", JSON.stringify({ id: local_id }));
+        socketio.emit("renew", JSON.stringify({ id: local_id, constraints: constraints }));
     }, 1500);
 }
 
@@ -117,7 +111,6 @@ socketio.on("renew", function (msg) {
                     { urls: 'stun:23.21.150.121' }
                 ]
             });
-
             remotes[new_user].peer.onicecandidate = function (ev) {
                 console.log(`onicecandidate:ev=${JSON.stringify(ev)}`);
 
@@ -137,12 +130,52 @@ socketio.on("renew", function (msg) {
 
                 if (ev.streams && ev.streams[0]) {
                     remotes[new_user].obj.show(ev);
+                    remotes[new_user].count = 0;
                 }
             }
 
-            remotes[new_user].video_sender = remotes[new_user].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
-            remotes[new_user].audio_sender = remotes[new_user].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
+            remotes[new_user].count = 0;
+            remotes[new_user].peer.onnegotiationneeded = function (ev) {
+                console.log(`count=${remotes[new_user].count}`);
 
+                if (!remotes[new_user].video_sender) return;
+                if (!remotes[new_user].audio_sender) return;
+
+                if (remotes[new_user].count == 0) {
+                    remotes[new_user].peer.createOffer()
+                        .then(function (offer) {
+                            console.log(`onnegotiationneeded: setLocalDescription`);
+                            const local_sdp = new RTCSessionDescription(offer);
+                            return remotes[new_user].peer.setLocalDescription(local_sdp);
+                        })
+                        .then(function () {
+                            console.log(`offer emit to=${new_user}`);
+
+                            socketio.emit("publish", JSON.stringify(
+                                {
+                                    type: "offer",
+                                    dest: new_user,
+                                    src: local_id,
+                                    sdp: remotes[new_user].peer.localDescription
+                                })
+                            );
+                        })
+                        .catch(function (err) {
+                            console.log(`count=${remotes[new_user].count}`)
+                            console.log(`onnegotiationneeded: ${err}`);
+                        })
+                    remotes[new_user].count++;
+                }
+            }
+
+            remotes[new_user].obj.on("click", function () {
+                remotes[new_user].video_sender = remotes[new_user].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
+                remotes[new_user].audio_sender = remotes[new_user].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
+            });
+
+            //remotes[new_user].obj.on("click", start_offer(remotes[new_user]))
+
+            /*
             remotes[new_user].obj.on("click", function () {
                 remotes[new_user].peer.createOffer()
                     .then(function (offer) {
@@ -163,6 +196,7 @@ socketio.on("renew", function (msg) {
                         );
                     })
             })
+            */
         }
     });
 
@@ -181,16 +215,26 @@ socketio.on("publish", function (msg) {
 
     if (data.dest == local_id) {
         if (data.type == "offer") {
+
+            if (!remotes[data.src].video_sender) {
+                remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
+            }
+            if (!remotes[data.src].audio_sender) {
+                remotes[data.src].audio_sender = remotes[data.src].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
+            }
+
             const remote_sdp = new RTCSessionDescription(data.sdp);
             remotes[data.src].peer.setRemoteDescription(remote_sdp)
                 .then(function () {
-                    console.log(`createAnswer`);
+                    console.log(`socket_on offer: createAnswer`);
                     return remotes[data.src].peer.createAnswer();
                 })
                 .then(function (answer) {
-                    console.log(`setLocalDescription answer`);
+                    console.log(`socket_on offer: setLocalDescription answer`);
                     const local_sdp = new RTCSessionDescription(answer);
-                    remotes[data.src].peer.setLocalDescription(local_sdp);
+                    return remotes[data.src].peer.setLocalDescription(local_sdp);
+                })
+                .then(function () {
                     socketio.emit("publish", JSON.stringify(
                         {
                             type: "answer",
