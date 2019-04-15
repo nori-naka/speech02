@@ -125,6 +125,15 @@ io.on("connection", function (socket) {
         }
     });
 
+    socket.on("video_start", function (msg) {
+        var data = JSON.parse(msg);
+        if (data.dest) {
+            socket.to(user_sid[data.dest]).emit("video_start", msg);
+        } else {
+            socket.broadcast.emit("video_start", msg);
+        }
+    })
+
     // カメラ情報設定
     socket.on("camera", function (msg) {
         var data = JSON.parse(msg);

@@ -8,6 +8,9 @@ const remotes = {};
 let local_id = null;
 let local_stream = null;
 
+//------------------------------------------
+let tv_conf_mode = false;
+
 let constraints = {
     audio: true,
     video: {
@@ -125,7 +128,6 @@ socketio.on("renew", function (msg) {
                     )
                 } else {
                     remotes[new_user].count = 0;
-                    side_answer = false;
                 }
             }
             remotes[new_user].peer.ontrack = function (ev) {
@@ -140,7 +142,10 @@ socketio.on("renew", function (msg) {
             remotes[new_user].peer.onnegotiationneeded = function (ev) {
                 console.log(`count=${remotes[new_user].count}`);
 
-                if (side_answer) return;
+                if (side_answer) {
+                    side_answer = false;
+                    return;
+                }
 
                 if (remotes[new_user].count == 0) {
                     remotes[new_user].peer.createOffer()
@@ -170,34 +175,20 @@ socketio.on("renew", function (msg) {
             }
 
             remotes[new_user].obj.on("click", function () {
-                remotes[new_user].video_sender = remotes[new_user].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
-                remotes[new_user].audio_sender = remotes[new_user].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
+                if (tv_conf_mode) {
+                    remotes[new_user].video_sender = remotes[new_user].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
+                    remotes[new_user].audio_sender = remotes[new_user].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
+                } else {
+                    socketio.emit("publish", JSON.stringify(
+                        {
+                            type: "video_start",
+                            dest: new_user,
+                            src: local_id,
+                        })
+                    )
+                }
             });
 
-            //remotes[new_user].obj.on("click", start_offer(remotes[new_user]))
-
-            /*
-            remotes[new_user].obj.on("click", function () {
-                remotes[new_user].peer.createOffer()
-                    .then(function (offer) {
-                        console.log(`setLocalDescription`);
-                        const local_sdp = new RTCSessionDescription(offer);
-                        return remotes[new_user].peer.setLocalDescription(local_sdp);
-                    })
-                    .then(function () {
-                        console.log(`offer emit to=${new_user}`);
-
-                        socketio.emit("publish", JSON.stringify(
-                            {
-                                type: "offer",
-                                dest: new_user,
-                                src: local_id,
-                                sdp: remotes[new_user].peer.localDescription
-                            })
-                        );
-                    })
-            })
-            */
         }
     });
 
@@ -221,11 +212,14 @@ socketio.on("publish", function (msg) {
 
 
             side_answer = true;
-            if (!remotes[data.src].video_sender) {
-                remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
-            }
-            if (!remotes[data.src].audio_sender) {
-                remotes[data.src].audio_sender = remotes[data.src].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
+
+            if (tv_conf_mode) {
+                if (!remotes[data.src].video_sender) {
+                    remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
+                }
+                if (!remotes[data.src].audio_sender) {
+                    remotes[data.src].audio_sender = remotes[data.src].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
+                }
             }
 
             const remote_sdp = new RTCSessionDescription(data.sdp);
@@ -260,6 +254,10 @@ socketio.on("publish", function (msg) {
             console.log(`addIceCandidate`);
             const candidate = new RTCIceCandidate(data.candidate);
             remotes[data.src].peer.addIceCandidate(candidate);
+        } else if (data.type == "video_start") {
+            console.log("video_start");
+            remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
+            remotes[data.src].audio_sender = remotes[data.src].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
         }
     }
 })
