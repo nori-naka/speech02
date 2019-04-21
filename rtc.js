@@ -8,6 +8,14 @@ const remotes = {};
 let local_id = null;
 let local_stream = null;
 
+//-----------------------------------------
+const LOG = function (msg) {
+    socketio.emit("log", {
+        id: local_id,
+        func: msg.func,
+        text: msg.text
+    });
+}
 //------------------------------------------
 let tv_conf_mode = false;
 
@@ -139,16 +147,25 @@ socketio.on("renew", function (msg) {
                 }
             }
 
+            remotes[new_user].peer.onsignalingstatechange = function (ev) {
+                LOG({
+                    func: "onsignalingstatechange",
+                    text: remotes[new_user].peer.signalingState
+                });
+            }
+
             remotes[new_user].count = 0;
             remotes[new_user].peer.onnegotiationneeded = function (ev) {
                 console.log(`count=${remotes[new_user].count}`);
 
-                if (side_answer) {
-                    side_answer = false;
-                    return;
-                }
+                if (remotes[new_user].peer.signalingState == "new" || remotes[new_user].peer.signalingState == "stable") {
+                    console.log(`signalingState=${remotes[new_user].peer.signalingState}`);
+                    // ---------- LOG to server -------------------
+                    LOG({
+                        func: "onnegotiationneeded",
+                        text: `signalingState=${remotes[new_user].peer.signalingState}`
+                    })
 
-                if (remotes[new_user].count == 0) {
                     remotes[new_user].peer.createOffer()
                         .then(function (offer) {
                             console.log(`onnegotiationneeded: setLocalDescription`);
@@ -171,8 +188,8 @@ socketio.on("renew", function (msg) {
                             console.log(`count=${remotes[new_user].count}`)
                             console.log(`onnegotiationneeded: ${err}`);
                         })
+
                 }
-                remotes[new_user].count++;
             }
 
             remotes[new_user].obj.on("click", function () {
@@ -227,10 +244,24 @@ socketio.on("publish", function (msg) {
             remotes[data.src].peer.setRemoteDescription(remote_sdp)
                 .then(function () {
                     console.log(`socket_on offer: createAnswer`);
+                    // ---------LOG to server-------------
+                    socketio.emit("log", {
+                        from: data.src,
+                        to: local_id,
+                        func: "createAnswer"
+                    });
+
                     return remotes[data.src].peer.createAnswer();
                 })
                 .then(function (answer) {
                     console.log(`socket_on offer: setLocalDescription answer`);
+                    // ---------LOG to server-------------
+                    socketio.emit("log", {
+                        from: data.src,
+                        to: local_id,
+                        func: "setLocalDescription answer"
+                    });
+
                     const local_sdp = new RTCSessionDescription(answer);
                     return remotes[data.src].peer.setLocalDescription(local_sdp);
                 })
@@ -249,6 +280,12 @@ socketio.on("publish", function (msg) {
                 });
         } else if (data.type == "answer") {
             console.log(`setRemoteDescription`);
+            // ---------LOG to server-------------
+            socketio.emit("log", {
+                id: local_id,
+                func: "recive answer"
+            });
+
             const remote_sdp = new RTCSessionDescription(data.sdp);
             remotes[data.src].peer.setRemoteDescription(remote_sdp)
         } else if (data.type == "candidate") {
@@ -256,6 +293,11 @@ socketio.on("publish", function (msg) {
             const candidate = new RTCIceCandidate(data.candidate);
             remotes[data.src].peer.addIceCandidate(candidate);
         } else if (data.type == "video_start") {
+            //------------LOG to server-------------------
+            socketio.emit("log", {
+                id: local_id,
+                func: "on video_start"
+            });
             console.log("video_start");
             remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
             remotes[data.src].audio_sender = remotes[data.src].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);

@@ -98,23 +98,22 @@ io.on("connection", function (socket) {
 
     // メッセージ送信
     socket.on("publish", function (msg) {
-        console.log(`publish=${msg}`)
+        //console.log(`publish=${msg}`)
         var data = JSON.parse(msg);
         if (data.dest) {
             //socket.broadcast.emit("publish", msg);
-            console.log(`data.dest=${data.dest}`);
-            console.log(`user_sid[data.dest] =${user_sid[data.dest]}`);
+            console.log(`publish data.dest=${data.dest} data.src=${data.src} data.type=${data.type}`);
+            //console.log(`user_sid[data.dest] =${user_sid[data.dest]}`);
             socket.to(user_sid[data.dest]).emit("publish", msg);
         } else {
             socket.broadcast.emit("publish", msg);
         }
-        console.log(`PUBLISH MSG: ${msg}`);
     });
 
     // 位置情報着信
     socket.on("renew", function (msg) {
         var data = JSON.parse(msg);
-        console.log(JSON.stringify(data, null, 2));
+        //console.log(JSON.stringify(data, null, 2));
         user_sid[data.id] = socket.id;
 
         //console.log(`ON RENEW : From=${data.id} LAT=${data.lat} LNG=${data.lng} CAM=${data.cam}`);
@@ -125,14 +124,7 @@ io.on("connection", function (socket) {
         }
     });
 
-    socket.on("video_start", function (msg) {
-        var data = JSON.parse(msg);
-        if (data.dest) {
-            socket.to(user_sid[data.dest]).emit("video_start", msg);
-        } else {
-            socket.broadcast.emit("video_start", msg);
-        }
-    })
+    socket.on("log", function (msg) { console.log(msg) });
 
     // カメラ情報設定
     socket.on("camera", function (msg) {
