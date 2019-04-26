@@ -7,6 +7,8 @@ const $remote = document.getElementById("remote");
 const remotes = {};
 let local_id = null;
 let local_stream = null;
+let audioCtx;
+let local_level_meter;
 
 //-----------------------------------------
 const LOG = function (msg) {
@@ -38,7 +40,7 @@ let constraints = {
 
 local_video_start = function () {
     navigator.mediaDevices.getUserMedia(constraints)
-        .then(function (stream) {
+        .then(function (stream) {            
             local_stream = stream;
             $local_elm.srcObject = local_stream;
             $local_elm.play();
@@ -60,6 +62,11 @@ $local_id.onchange = function (ev) {
     $local_id.style.display = "none";
     $local_name.innerText = local_id;
     $local_name.style.display = "block";
+
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let $local_level = document.getElementById("local_level");
+    local_level_meter = new Audio_meter(local_stream, audioCtx, $local_level);
+
     setInterval(function () {
         socketio.emit("renew", JSON.stringify({ id: local_id, constraints: constraints }));
     }, 1500);
@@ -74,6 +81,7 @@ const Create_elm = function (name, parent, a_class) {
     this.$media.classList.add("video");
     this.$media.style.display = "none";
     this.$media.setAttribute("playsinline", true);
+    
     this.$li.appendChild(this.$name);
     this.$li.appendChild(this.$media);
     this.$li.classList.add(a_class);
@@ -88,6 +96,12 @@ Create_elm.prototype.show = function (ev) {
         this.$media.srcObject = ev.streams[0];
         this.$media.style.display = "block";
         this.$media.play();
+    }
+    if (ev.track.kind == "audio"){
+        this.$canvas = document.createElement("canvas");
+        this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        this.remote_level_meter = new Audio_meter(ev.streams[0], this.audioCtx, this.$canvas);
+        this.$li.appendChild(this.$canvas);
     }
 }
 Create_elm.prototype.delete = function () {
@@ -220,16 +234,11 @@ socketio.on("renew", function (msg) {
     })
 });
 
-let side_answer = false;
-
 socketio.on("publish", function (msg) {
     const data = JSON.parse(msg);
 
     if (data.dest == local_id) {
         if (data.type == "offer") {
-
-
-            side_answer = true;
 
             if (tv_conf_mode) {
                 if (!remotes[data.src].video_sender) {
