@@ -40,7 +40,7 @@ let constraints = {
 
 local_video_start = function () {
     navigator.mediaDevices.getUserMedia(constraints)
-        .then(function (stream) {            
+        .then(function (stream) {
             local_stream = stream;
             $local_elm.srcObject = local_stream;
             $local_elm.play();
@@ -63,9 +63,8 @@ $local_id.onchange = function (ev) {
     $local_name.innerText = local_id;
     $local_name.style.display = "block";
 
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     let $local_level = document.getElementById("local_level");
-    local_level_meter = new Audio_meter(local_stream, audioCtx, $local_level);
+    local_level_meter = new Audio_meter(local_stream, $local_level);
 
     setInterval(function () {
         socketio.emit("renew", JSON.stringify({ id: local_id, constraints: constraints }));
@@ -81,7 +80,7 @@ const Create_elm = function (name, parent, a_class) {
     this.$media.classList.add("video");
     this.$media.style.display = "none";
     this.$media.setAttribute("playsinline", true);
-    
+
     this.$li.appendChild(this.$name);
     this.$li.appendChild(this.$media);
     this.$li.classList.add(a_class);
@@ -96,11 +95,9 @@ Create_elm.prototype.show = function (ev) {
         this.$media.srcObject = ev.streams[0];
         this.$media.style.display = "block";
         this.$media.play();
-    }
-    if (ev.track.kind == "audio"){
+    } else {
         this.$canvas = document.createElement("canvas");
-        this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        this.remote_level_meter = new Audio_meter(ev.streams[0], this.audioCtx, this.$canvas);
+        this.remote_level_meter = new Audio_meter(ev.streams[0], this.$canvas);
         this.$li.appendChild(this.$canvas);
     }
 }
@@ -308,8 +305,12 @@ socketio.on("publish", function (msg) {
                 func: "on video_start"
             });
             console.log("video_start");
-            remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
-            remotes[data.src].audio_sender = remotes[data.src].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
+            if (local_stream.getTracks()[0].kind == "video") {
+                remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
+            }
+            if (local_stream.getTracks()[0].kind == "audio") {
+                remotes[data.src].audio_sender = remotes[data.src].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
+            }
         }
     }
 })
