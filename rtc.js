@@ -305,12 +305,8 @@ socketio.on("publish", function (msg) {
                 func: "on video_start"
             });
             console.log("video_start");
-            if (local_stream.getTracks()[0].kind == "video") {
-                remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
-            }
-            if (local_stream.getTracks()[0].kind == "audio") {
-                remotes[data.src].audio_sender = remotes[data.src].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
-            }
+            remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
+            remotes[data.src].audio_sender = remotes[data.src].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
         }
     }
 })
