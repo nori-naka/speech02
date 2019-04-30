@@ -6,6 +6,8 @@ body {
 .text {
   font-family: 'Avenir','Helvetica Neue','Helvetica','Arial','Hiragino Sans','ヒラギノ角ゴシック',YuGothic,'Yu Gothic','メイリオ', Meiryo,'ＭＳ Ｐゴシック','MS PGothic';
   font-size: 24px;
+  height: 32px;
+  width: 100%;
 }
 /* ビデオ */
 .video {

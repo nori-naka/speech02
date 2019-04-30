@@ -1,6 +1,5 @@
 const socketio = io.connect();
 
-const $local_id = document.getElementById("local_id");
 const $local_name = document.getElementById("local_name");
 const $local_elm = document.getElementById("local_elm");
 const $remote = document.getElementById("remote");
@@ -62,9 +61,14 @@ $local_id.onchange = function (ev) {
     $local_id.style.display = "none";
     $local_name.innerText = local_id;
     $local_name.style.display = "block";
+    $login_dialog.style.display = "none";
 
     let $local_level = document.getElementById("local_level");
-    local_level_meter = new Audio_meter(local_stream, $local_level);
+    //$local_elm.style.position = "abusolute";
+    //$local_level.style.position = "abusolute";
+    //local_level_meter = new Audio_meter(local_stream, $local_level, "#dd822d");
+    const local_color = window.getComputedStyle($local, null).getPropertyValue("color");
+    local_level_meter = new Audio_meter(local_stream, $local_level, local_color);
 
     setInterval(function () {
         socketio.emit("renew", JSON.stringify({ id: local_id, constraints: constraints }));
@@ -81,7 +85,13 @@ const Create_elm = function (name, parent, a_class) {
     this.$media.style.display = "none";
     this.$media.setAttribute("playsinline", true);
 
+    // -- level meter --
+    this.$canvas = document.createElement("canvas");
+    this.$canvas.classList.add("text");
+    //this.remote_color = window.getComputedStyle(this.$li, null).getPropertyValue("color");
+
     this.$li.appendChild(this.$name);
+    this.$li.appendChild(this.$canvas);
     this.$li.appendChild(this.$media);
     this.$li.classList.add(a_class);
     parent.appendChild(this.$li);
@@ -96,11 +106,10 @@ Create_elm.prototype.show = function (ev) {
         this.$media.style.display = "block";
         this.$media.play();
     } else {
-        this.$canvas = document.createElement("canvas");
-        this.remote_level_meter = new Audio_meter(ev.streams[0], this.$canvas);
-        this.$li.appendChild(this.$canvas);
+        this.remote_level_meter = new Audio_meter(ev.streams[0], this.$canvas, "#2d8fdd");
     }
 }
+
 Create_elm.prototype.delete = function () {
     this.$li.removeChild(this.$media);
     this.$li.removeChild(this.$name);
@@ -305,12 +314,8 @@ socketio.on("publish", function (msg) {
                 func: "on video_start"
             });
             console.log("video_start");
-            if (local_stream.getTracks()[0].kind == "video") {
-                remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
-            }
-            if (local_stream.getTracks()[0].kind == "audio") {
-                remotes[data.src].audio_sender = remotes[data.src].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
-            }
+            remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
+            remotes[data.src].audio_sender = remotes[data.src].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
         }
     }
 })

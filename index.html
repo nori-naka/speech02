@@ -5,22 +5,40 @@
     <meta charset="UTF-8">
     <title>Document</title>
     <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="dialog.css">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 
 <body>
+    <!-- DIALOG LOGIN-->
+    <div id="myModal" class="modal">
+        <!-- Modal content -->
+        <div class="modal-content">
+            <span class="close" id="btn_close">&times;</span>
+            <p>LOGIN</p>
+            <input type="text" id="local_id" class="text">
+        </div>
+    </div>
+    <!-- DIALOG LOGIN-->
+
     <div id="local" class="local_user">
         <li>
-            <input type="text" id="local_id" class="text">
-            <div id="local_name" style="display:none;" class="text"></div>
+            <div class="name">
+                <div id="local_name" style="display:none;" class="text"></div>
+                <canvas id="local_level" class="text"></canvas>
+            </div>
             <video id="local_elm" class="video" muted autoplay playsinline></video>
         </li>
-        <canvas id="local_level"></canvas>
     </div>
     <div id="remote"></div>
 </body>
 <script src="selectdDevices.js"></script>
 <script src="audio_meter.js"></script>
+<script src="dialog.js"></script>
 <script src="rtc.js"></script>
+
+<script>
+    $login_dialog.style.display = "block";
+</script>
 
 </html>
