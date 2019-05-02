@@ -21,7 +21,10 @@ const LOG = function (msg) {
 let tv_conf_mode = false;
 
 let constraints = {
-    audio: true,
+    audio:
+    {
+        echoCancellationType: 'system'
+    },
     video: {
         width: {
             min: 320,
@@ -41,9 +44,21 @@ local_video_start = function () {
     navigator.mediaDevices.getUserMedia(constraints)
         .then(function (stream) {
             local_stream = stream;
+            // setting state in console
+            console.log(`AUDIO SETTING=${JSON.stringify(stream.getAudioTracks()[0].getSettings())}`);
+            console.log(`VIDEO SETTING=${JSON.stringify(stream.getVideoTracks()[0].getSettings())}`);
+            LOG({
+                id: "none",
+                func: "getUserMedia",
+                text: `SETTING=${JSON.stringify(stream.getAudioTracks()[0].getSettings())}`
+            });
             $local_elm.srcObject = local_stream;
             $local_elm.play();
             selectDevices();
+
+            let $local_level = document.getElementById("local_level");
+            const local_color = window.getComputedStyle($local, null).getPropertyValue("color");
+            local_level_meter = new Audio_meter(local_stream, $local_level, local_color);
         })
         .catch(function (err) {
             console.log(`gUM error:${err}`);
@@ -51,29 +66,42 @@ local_video_start = function () {
 }
 local_video_start();
 
+
 const stream_stop = function (stream) {
-    stream.getVideoTracks().forEach(track => track.stop());
+    stream.getTracks().forEach(track => track.stop());
 }
 
+const login = function () {
+    const $login_dialog = new Create_dialog(document.body);
+    $login_dialog.on_click(function (ev) {
+
+        local_id = $local_id.value;
+        $local_name.innerText = local_id;
+        $local_name.style.display = "inline-block";
+
+        setInterval(function () {
+            socketio.emit("renew", JSON.stringify({ id: local_id, constraints: constraints }));
+        }, 1500);
+    });
+
+    $login_dialog.get_element().style.display = "block";
+}
+login();
+
+/*
 $local_id.onchange = function (ev) {
     console.log(`$local_id:${ev.target.value}`);
     local_id = ev.target.value;
     $local_id.style.display = "none";
     $local_name.innerText = local_id;
-    $local_name.style.display = "block";
+    $local_name.style.display = "inline-block";
     $login_dialog.style.display = "none";
-
-    let $local_level = document.getElementById("local_level");
-    //$local_elm.style.position = "abusolute";
-    //$local_level.style.position = "abusolute";
-    //local_level_meter = new Audio_meter(local_stream, $local_level, "#dd822d");
-    const local_color = window.getComputedStyle($local, null).getPropertyValue("color");
-    local_level_meter = new Audio_meter(local_stream, $local_level, local_color);
 
     setInterval(function () {
         socketio.emit("renew", JSON.stringify({ id: local_id, constraints: constraints }));
     }, 1500);
 }
+*/
 
 const Create_elm = function (name, parent, a_class) {
     this.$li = document.createElement("li");
@@ -217,6 +245,12 @@ socketio.on("renew", function (msg) {
                     remotes[new_user].video_sender = remotes[new_user].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
                     remotes[new_user].audio_sender = remotes[new_user].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
                 } else {
+
+                    const stream = remotes[new_user].obj.$media.srcObject;
+                    if (stream) {
+                        stream_stop(stream);
+                        remotes[new_user].obj.$media.play();
+                    }
                     socketio.emit("publish", JSON.stringify(
                         {
                             type: "video_start",
@@ -314,8 +348,47 @@ socketio.on("publish", function (msg) {
                 func: "on video_start"
             });
             console.log("video_start");
-            remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
-            remotes[data.src].audio_sender = remotes[data.src].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
+
+            if (remotes[data.src].video_sender) {
+                if (remotes[data.src].video_sender.track) {
+                    remotes[data.src].peer.removeTrack(remotes[data.src].video_sender);
+                } else {
+                    remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
+                }
+            } else {
+                remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
+            }
+
+            if (remotes[data.src].audio_sender) {
+                if (remotes[data.src].audio_sender.track) {
+                    remotes[data.src].peer.removeTrack(remotes[data.src].audio_sender);
+                } else {
+                    remotes[data.src].audio_sender = remotes[data.src].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
+                }
+            } else {
+                remotes[data.src].audio_sender = remotes[data.src].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
+            }
+
+            /*
+            if (remotes[data.src].video_sender) {
+                if (remotes[data.src].video_sender.track) {
+                    remotes[data.src].peer.removeTrack(remotes[data.src].video_sender);
+                }
+            }
+            setTimeout(function () {
+                remotes[data.src].video_sender = remotes[data.src].peer.addTrack(local_stream.getVideoTracks()[0], local_stream);
+            }, 500);
+
+            if (remotes[data.src].audio_sender) {
+                if (remotes[data.src].audio_sender.track) {
+                    remotes[data.src].peer.removeTrack(remotes[data.src].audio_sender);
+                }
+            }
+            setTimeout(function () {
+                remotes[data.src].audio_sender = remotes[data.src].peer.addTrack(local_stream.getAudioTracks()[0], local_stream);
+            }, 500);
+            */
+
         }
     }
 })
